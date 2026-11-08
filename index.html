@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#B01E28">
+<title>京都北ラグビースクール 出欠</title>
+<style>
+  :root{
+    --primary:#B01E28; --primary-dark:#87141C; --primary-soft:#F7E3E4;
+    --bg:#F7F3F2; --card:#FFFFFF; --ink:#2A2224; --ink-soft:#6E5F61;
+    --gold:#E8B93C; --ok:#2E7D4F; --ok-soft:#E3F0E8; --ng:#B01E28; --tbd:#8A94A0;
+    --border:#E5D9D9; --radius:14px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:"Hiragino Maru Gothic ProN","Hiragino Kaku Gothic ProN","Yu Gothic","Noto Sans JP",sans-serif;
+    background:var(--bg);color:var(--ink);font-size:15px;line-height:1.6;-webkit-font-smoothing:antialiased;}
+  header{background:repeating-linear-gradient(90deg,var(--primary) 0,var(--primary) 56px,var(--primary-dark) 56px,var(--primary-dark) 112px);
+    color:#fff;padding:20px 16px 16px;padding-top:calc(20px + env(safe-area-inset-top));position:relative;}
+  header::after{content:"";position:absolute;left:0;right:0;bottom:0;height:3px;background:var(--gold);}
+  header h1{font-size:20px;font-weight:700;letter-spacing:.02em;}
+  header p{font-size:12.5px;opacity:.92;margin-top:2px;}
+  nav{display:flex;background:var(--card);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10;}
+  nav button{flex:1;padding:13px 4px;border:none;background:none;font-family:inherit;font-size:14px;font-weight:600;
+    color:var(--ink-soft);border-bottom:3px solid transparent;cursor:pointer;}
+  nav button.active{color:var(--primary);border-bottom-color:var(--primary);}
+  main{max-width:640px;margin:0 auto;padding:16px 14px 80px;}
+  .view{display:none;} .view.active{display:block;}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:14px;}
+  .card h2{font-size:16px;margin-bottom:12px;color:var(--primary-dark);}
+  label{display:block;font-size:13px;font-weight:600;margin:14px 0 6px;}
+  label .req{color:var(--ng);font-size:11px;margin-left:4px;}
+  input[type=text],input[type=password],input[type=date],select,textarea{width:100%;padding:11px 12px;font-size:16px;font-family:inherit;
+    border:1.5px solid var(--border);border-radius:10px;background:#FBF9F9;color:var(--ink);}
+  input:focus,select:focus,textarea:focus{outline:2px solid var(--primary);outline-offset:1px;}
+  textarea{resize:vertical;min-height:64px;}
+  .btn{display:block;width:100%;padding:13px;font-size:16px;font-weight:700;font-family:inherit;border:none;border-radius:12px;
+    cursor:pointer;margin-top:16px;background:var(--primary);color:#fff;}
+  .btn:active{background:var(--primary-dark);} .btn:disabled{opacity:.5;}
+  .btn.sub{background:#fff;color:var(--primary);border:1.5px solid var(--primary);}
+  .btn.small{display:inline-block;width:auto;padding:7px 12px;font-size:13px;margin-top:0;background:#fff;color:var(--ng);border:1.5px solid var(--ng);}
+  .seg{display:flex;gap:8px;}
+  .seg button{flex:1;padding:12px 4px;font-size:15px;font-weight:700;font-family:inherit;border-radius:10px;
+    border:1.5px solid var(--border);background:#FBF9F9;color:var(--ink-soft);cursor:pointer;}
+  .seg button.on{background:var(--primary);border-color:var(--primary);color:#fff;}
+  .seg button.on.ok{background:var(--ok);border-color:var(--ok);}
+  .seg button.on.tbd{background:var(--tbd);border-color:var(--tbd);}
+  .event-pick{display:block;width:100%;text-align:left;font-family:inherit;cursor:pointer;background:var(--card);
+    border:1.5px solid var(--border);border-radius:var(--radius);padding:13px 14px;margin-bottom:10px;color:var(--ink);}
+  .event-pick.selected{border-color:var(--primary);box-shadow:0 0 0 2px rgba(176,30,40,.18);}
+  .d{font-size:15px;font-weight:700;color:var(--primary-dark);}
+  .m{font-size:12.5px;color:var(--ink-soft);margin-top:2px;}
+  .tag{display:inline-block;font-size:11px;font-weight:700;padding:2px 8px;border-radius:999px;margin-right:6px;vertical-align:1px;}
+  .tag.practice{background:var(--primary-soft);color:var(--primary-dark);}
+  .tag.match{background:#F7E9C8;color:#8A6510;}
+  .tag.other{background:#E7E9F2;color:#3C4A78;}
+  /* overview table */
+  .ov{width:100%;border-collapse:collapse;font-size:13px;}
+  .ov th{background:var(--primary);color:#fff;font-weight:600;padding:8px 4px;font-size:12px;}
+  .ov th:first-child{border-radius:8px 0 0 0;text-align:left;padding-left:10px;}
+  .ov th:last-child{border-radius:0 8px 0 0;}
+  .ov td{padding:10px 4px;border-bottom:1px solid var(--border);text-align:center;}
+  .ov td:first-child{text-align:left;padding-left:10px;}
+  .ov tr.row{cursor:pointer;} .ov tr.row:active{background:var(--primary-soft);}
+  .ov .total{font-weight:800;font-size:17px;color:var(--ok);}
+  .ov .sub{font-size:11px;color:var(--ink-soft);display:block;font-weight:400;}
+  .ov .zero{color:#C9BFC0;}
+  .counts{display:flex;gap:8px;margin-bottom:14px;}
+  .counts div{flex:1;text-align:center;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:10px 4px;}
+  .counts .n{font-size:22px;font-weight:800;line-height:1.2;} .counts .l{font-size:11.5px;color:var(--ink-soft);}
+  .counts .ok .n{color:var(--ok);} .counts .ng .n{color:var(--ng);} .counts .tbd .n{color:var(--tbd);}
+  .gb{margin-bottom:14px;}
+  .gb h3{font-size:13.5px;color:#fff;background:var(--primary);padding:6px 12px;border-radius:8px 8px 0 0;display:flex;justify-content:space-between;}
+  .gb h3 span{font-weight:400;font-size:12px;}
+  .gb table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--border);border-top:none;}
+  .gb td{padding:9px 10px;border-top:1px solid var(--border);font-size:13.5px;vertical-align:top;}
+  .gb tr:first-child td{border-top:none;}
+  td.st{width:52px;font-weight:700;text-align:center;white-space:nowrap;}
+  td.st.ok{color:var(--ok);} td.st.ng{color:var(--ng);} td.st.tbd{color:var(--tbd);}
+  .note{color:var(--ink-soft);font-size:12.5px;}
+  .empty{text-align:center;color:var(--ink-soft);padding:24px 10px;font-size:13.5px;border:1px dashed var(--border);border-radius:var(--radius);background:var(--card);}
+  .loading{text-align:center;color:var(--ink-soft);padding:24px;font-size:13.5px;}
+  .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%) translateY(20px);opacity:0;transition:.25s;
+    background:var(--ink);color:#fff;padding:12px 18px;border-radius:12px;font-size:14px;font-weight:600;z-index:50;max-width:90vw;text-align:center;}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+  .toast.bad{background:var(--ng);}
+  .hint{font-size:12px;color:var(--ink-soft);margin-top:6px;}
+  .gchecks{display:flex;gap:8px;}
+  .gchecks label{flex:1;display:flex;justify-content:center;margin:0;padding:10px 4px;border:1.5px solid var(--border);border-radius:10px;
+    background:#FBF9F9;cursor:pointer;font-size:14px;}
+  .gchecks label.on{border-color:var(--primary);background:var(--primary-soft);color:var(--primary-dark);}
+  .gchecks input{display:none;}
+  .ae{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:11px 0;border-bottom:1px solid var(--border);}
+  .ae:last-child{border-bottom:none;}
+  .back{background:none;border:none;color:var(--primary);font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;padding:4px 0 12px;}
+  .detail-head{margin-bottom:12px;}
+</style>
+</head>
+<body>
+<header>
+  <h1>京都北ラグビースクール</h1>
+  <p>出欠スケジュール — 未就学児・小1・小2</p>
+</header>
+<nav>
+  <button id="tb-answer" class="active" onclick="showTab('answer')">出欠を回答</button>
+  <button id="tb-list" onclick="showTab('list')">回答をみる</button>
+  <button id="tb-admin" onclick="showTab('admin')">予定管理</button>
+</nav>
+<main>
+  <!-- 回答 -->
+  <section id="v-answer" class="view active">
+    <div class="card">
+      <h2>1. 日程をえらぶ</h2>
+      <div id="a-events" class="loading">読み込み中…</div>
+    </div>
+    <div class="card" id="a-form" style="display:none;">
+      <h2>2. 出欠を入力</h2>
+      <label>学年<span class="req">必須</span></label>
+      <div class="seg" id="a-grade"></div>
+      <label>おこさまのフルネーム<span class="req">必須</span></label>
+      <input type="text" id="a-name" placeholder="例：山田 太郎" maxlength="40" autocomplete="off">
+      <div class="hint">次回から自動で入ります。兄弟姉妹は1人ずつ送信してください。</div>
+      <label>出欠<span class="req">必須</span></label>
+      <div class="seg" id="a-status">
+        <button type="button" data-v="出席" class="ok">出席</button>
+        <button type="button" data-v="欠席">欠席</button>
+        <button type="button" data-v="未定" class="tbd">未定</button>
+      </div>
+      <label>備考欄</label>
+      <textarea id="a-note" maxlength="300" placeholder="例：30分遅れて参加／お迎えが早めです など"></textarea>
+      <button class="btn" id="a-submit" onclick="submitAnswer()">回答を送信する</button>
+      <div class="hint">同じ学年・同じ名前で送り直すと回答が上書きされます（変更もここから）。</div>
+    </div>
+  </section>
+
+  <!-- 一覧 -->
+  <section id="v-list" class="view">
+    <div id="l-overview">
+      <div class="card">
+        <h2>日程ごとの出席人数</h2>
+        <div id="l-table" class="loading">読み込み中…</div>
+        <div class="hint">行をタップすると、学年別の名簿と備考が見られます。</div>
+      </div>
+    </div>
+    <div id="l-detail" style="display:none;"></div>
+  </section>
+
+  <!-- 管理 -->
+  <section id="v-admin" class="view">
+    <div class="card" id="m-lock">
+      <h2>事務局PIN</h2>
+      <input type="password" id="m-pin" inputmode="numeric" placeholder="PINを入力">
+      <button class="btn" onclick="unlock()">開く</button>
+      <div class="hint">予定の登録・削除は事務局のみ行えます。</div>
+    </div>
+    <div id="m-body" style="display:none;">
+      <div class="card">
+        <h2>予定を追加</h2>
+        <label>日付<span class="req">必須</span></label>
+        <input type="date" id="m-date">
+        <label>種別<span class="req">必須</span></label>
+        <div class="seg" id="m-type">
+          <button type="button" data-v="練習" class="on">練習</button>
+          <button type="button" data-v="試合">試合</button>
+          <button type="button" data-v="イベント">イベント</button>
+        </div>
+        <label>場所<span class="req">必須</span></label>
+        <input type="text" id="m-place" maxlength="100" placeholder="例：宝が池公園 球技場">
+        <label>対象学年</label>
+        <div class="gchecks" id="m-grades"></div>
+        <label>連絡事項（集合時間・持ち物など）</label>
+        <textarea id="m-note" maxlength="500" placeholder="例：9:00集合／水筒・タオル持参"></textarea>
+        <button class="btn" id="m-add" onclick="addEvent()">この予定を登録する</button>
+      </div>
+      <div class="card">
+        <h2>登録済みの予定</h2>
+        <div id="m-events"></div>
+      </div>
+      <div class="card">
+        <h2>PINを変更</h2>
+        <input type="password" id="m-newpin" inputmode="numeric" placeholder="新しいPIN（4桁以上）">
+        <button class="btn sub" onclick="changePin()">変更する</button>
+      </div>
+    </div>
+  </section>
+</main>
+<div class="toast" id="toast"></div>
+
+<script>
+const SB_URL = "https://ltiefywenbkhcefljizg.supabase.co";
+const SB_KEY = "sb_publishable_7UF8suYO67WaOpC0qKdWXw_DllMteop";
+const GRADES = ["未就学児","小1","小2"];
+const STC = {"出席":"ok","欠席":"ng","未定":"tbd"};
+
+let events = [], responses = [];
+let selEvent = null, selGrade = null, selStatus = null, mType = "練習";
+let adminPin = null;
+
+/* ---------- API ---------- */
+async function api(path, opts = {}){
+  const res = await fetch(SB_URL + "/rest/v1/" + path, {
+    ...opts,
+    headers: {"apikey": SB_KEY, "Content-Type": "application/json", ...(opts.headers||{})}
+  });
+  if(!res.ok) throw new Error(await res.text());
+  const t = await res.text();
+  return t ? JSON.parse(t) : null;
+}
+const rpc = (fn, body) => api("rpc/" + fn, {method:"POST", body: JSON.stringify(body)});
+
+async function loadAll(){
+  const [ev, rs] = await Promise.all([
+    api("events?select=*&order=event_date.asc"),
+    api("responses?select=*&order=full_name.asc")
+  ]);
+  events = ev || []; responses = rs || [];
+}
+
+/* ---------- utils ---------- */
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function iso(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function today(){ return iso(new Date()); }
+function nextSunday(){ const d=new Date(); d.setDate(d.getDate()+((7-d.getDay())%7||7)); return iso(d); }
+function fmt(s){ const [y,m,d]=s.split("-").map(Number); const w="日月火水木金土"[new Date(y,m-1,d).getDay()]; return `${m}/${d}(${w})`; }
+function tag(t){ return `<span class="tag ${t==="練習"?"practice":t==="試合"?"match":"other"}">${t}</span>`; }
+function upcoming(){ return events.filter(e => e.event_date >= today()); }
+let tt;
+function toast(msg, bad){ const el=document.getElementById("toast"); el.textContent=msg; el.className="toast show"+(bad?" bad":""); clearTimeout(tt); tt=setTimeout(()=>el.className="toast",3200); }
+function ls(k,v){ try{ if(v===undefined) return JSON.parse(localStorage.getItem(k)); localStorage.setItem(k,JSON.stringify(v)); }catch(e){ return null; } }
+function segBind(id, cb){
+  document.getElementById(id).addEventListener("click", e => {
+    const b = e.target.closest("button"); if(!b) return;
+    [...e.currentTarget.children].forEach(x => x.classList.toggle("on", x===b)); cb(b.dataset.v);
+  });
+}
+
+/* ---------- tabs ---------- */
+function showTab(n){
+  ["answer","list","admin"].forEach(k => {
+    document.getElementById("v-"+k).classList.toggle("active", k===n);
+    document.getElementById("tb-"+k).classList.toggle("active", k===n);
+  });
+  if(n==="list"){ closeDetail(); refresh(); }
+  if(n==="answer") refresh();
+}
+async function refresh(){
+  try{ await loadAll(); }catch(e){ toast("読み込みに失敗しました。電波を確認してください", true); return; }
+  renderAnswerEvents(); renderOverview(); renderAdminEvents();
+}
+
+/* ---------- 回答 ---------- */
+function renderAnswerEvents(){
+  const box = document.getElementById("a-events"), list = upcoming();
+  box.className = "";
+  if(!list.length){ box.innerHTML = `<div class="empty">今後の予定はまだありません。</div>`; return; }
+  box.innerHTML = list.map(e => `
+    <button class="event-pick ${selEvent===e.id?"selected":""}" onclick="pickEvent('${e.id}')">
+      <div class="d">${tag(e.event_type)}${fmt(e.event_date)}</div>
+      <div class="m">📍 ${esc(e.place)}　対象：${esc((e.grades||[]).join("・"))}</div>
+      ${e.note?`<div class="m">📢 ${esc(e.note)}</div>`:""}
+    </button>`).join("");
+}
+function pickEvent(id){
+  selEvent = id; renderAnswerEvents();
+  const f = document.getElementById("a-form"); f.style.display="block";
+  f.scrollIntoView({behavior:"smooth", block:"start"});
+}
+async function submitAnswer(){
+  const name = document.getElementById("a-name").value.trim();
+  const note = document.getElementById("a-note").value.trim();
+  if(!selEvent) return toast("日程を選んでください", true);
+  if(!selGrade) return toast("学年を選んでください", true);
+  if(!name) return toast("フルネームを入力してください", true);
+  if(!selStatus) return toast("出席・欠席・未定を選んでください", true);
+  const btn = document.getElementById("a-submit"); btn.disabled = true;
+  try{
+    await rpc("submit_response", {p_event:selEvent, p_grade:selGrade, p_name:name, p_status:selStatus, p_note:note});
+    ls("kkrs_me", {name, grade:selGrade});
+    toast(`${name}さん「${selStatus}」で受け付けました`);
+    document.getElementById("a-note").value = "";
+    selStatus = null; [...document.getElementById("a-status").children].forEach(x=>x.classList.remove("on"));
+    loadAll().then(renderOverview).catch(()=>{});
+  }catch(e){ toast("送信に失敗しました。もう一度お試しください", true); }
+  btn.disabled = false;
+}
+
+/* ---------- 一覧 ---------- */
+function countFor(evId){
+  const rs = responses.filter(r => r.event_id === evId);
+  const c = {出席:0, 欠席:0, 未定:0, g:{}};
+  GRADES.forEach(g => c.g[g] = 0);
+  rs.forEach(r => { c[r.status]++; if(r.status==="出席" && c.g[r.grade]!==undefined) c.g[r.grade]++; });
+  return c;
+}
+function renderOverview(){
+  const box = document.getElementById("l-table");
+  box.className = "";
+  const list = upcoming();
+  const shown = list.length ? list : events.slice(-5);
+  if(!shown.length){ box.innerHTML = `<div class="empty">予定がまだ登録されていません。</div>`; return; }
+  box.innerHTML = `<table class="ov"><thead><tr>
+      <th>日程</th>${GRADES.map(g=>`<th>${g==="未就学児"?"未就学":g}</th>`).join("")}<th>出席計</th></tr></thead><tbody>
+    ${shown.map(e => { const c = countFor(e.id); return `
+      <tr class="row" onclick="openDetail('${e.id}')">
+        <td><b>${fmt(e.event_date)}</b> ${tag(e.event_type)}<span class="sub">${esc(e.place)}</span></td>
+        ${GRADES.map(g => (e.grades||[]).includes(g)
+            ? `<td class="${c.g[g]?"":"zero"}">${c.g[g]}</td>` : `<td class="zero">－</td>`).join("")}
+        <td><span class="total">${c.出席}</span><span class="sub">欠${c.欠席}・未${c.未定}</span></td>
+      </tr>`; }).join("")}
+    </tbody></table>`;
+}
+function openDetail(id){
+  const e = events.find(x => x.id === id); if(!e) return;
+  const rs = responses.filter(r => r.event_id === id);
+  const c = countFor(id);
+  let h = `<button class="back" onclick="closeDetail()">← 一覧にもどる</button>
+    <div class="card detail-head"><div class="d">${tag(e.event_type)}${fmt(e.event_date)}</div>
+    <div class="m">📍 ${esc(e.place)}</div>${e.note?`<div class="m">📢 ${esc(e.note)}</div>`:""}</div>
+    <div class="counts"><div class="ok"><div class="n">${c.出席}</div><div class="l">出席</div></div>
+    <div class="ng"><div class="n">${c.欠席}</div><div class="l">欠席</div></div>
+    <div class="tbd"><div class="n">${c.未定}</div><div class="l">未定</div></div></div>`;
+  GRADES.filter(g => (e.grades||[]).includes(g) || rs.some(r=>r.grade===g)).forEach(g => {
+    const rows = rs.filter(r => r.grade === g).sort((a,b)=>{
+      const o={"出席":0,"未定":1,"欠席":2}; return o[a.status]-o[b.status] || a.full_name.localeCompare(b.full_name,"ja"); });
+    h += `<div class="gb"><h3>${g}<span>出席 ${c.g[g]||0} ／ 回答 ${rows.length}名</span></h3><table>
+      ${rows.length ? rows.map(r => `<tr><td class="st ${STC[r.status]}">${r.status}</td>
+        <td>${esc(r.full_name)}${r.note?`<div class="note">${esc(r.note)}</div>`:""}</td></tr>`).join("")
+        : `<tr><td class="note">まだ回答がありません</td></tr>`}</table></div>`;
+  });
+  document.getElementById("l-overview").style.display = "none";
+  const d = document.getElementById("l-detail"); d.innerHTML = h; d.style.display = "block";
+  window.scrollTo({top:0});
+}
+function closeDetail(){
+  document.getElementById("l-detail").style.display = "none";
+  document.getElementById("l-overview").style.display = "block";
+}
+
+/* ---------- 管理 ---------- */
+const PIN_MSG = {invalid_pin:"PINが違います", locked:"失敗が続いたため15分ロック中です", pin_too_short:"PINは4桁以上にしてください"};
+async function unlock(){
+  const p = document.getElementById("m-pin").value.trim();
+  if(!p) return;
+  try{
+    const r = await rpc("verify_pin", {p_pin:p});
+    if(r !== "ok") return toast(PIN_MSG[r] || "確認できませんでした", true);
+    adminPin = p; try{ sessionStorage.setItem("kkrs_pin", p); }catch(e){}
+    openAdmin();
+  }catch(e){ toast("通信に失敗しました", true); }
+}
+function openAdmin(){
+  document.getElementById("m-lock").style.display = "none";
+  document.getElementById("m-body").style.display = "block";
+  renderAdminEvents();
+}
+function renderAdminEvents(){
+  const box = document.getElementById("m-events");
+  if(!events.length){ box.innerHTML = `<div class="empty">まだ予定がありません。</div>`; return; }
+  box.innerHTML = [...events].reverse().map(e => `
+    <div class="ae"><div><div class="d" style="font-size:14px">${tag(e.event_type)}${fmt(e.event_date)}</div>
+      <div class="m">${esc(e.place)}／${esc((e.grades||[]).join("・"))}</div></div>
+      <button class="btn small" onclick="delEvent('${e.id}')">削除</button></div>`).join("");
+}
+async function addEvent(){
+  const date = document.getElementById("m-date").value;
+  const place = document.getElementById("m-place").value.trim();
+  const note = document.getElementById("m-note").value.trim();
+  const grades = [...document.querySelectorAll("#m-grades input:checked")].map(i=>i.value);
+  if(!date) return toast("日付を入力してください", true);
+  if(!place) return toast("場所を入力してください", true);
+  if(!grades.length) return toast("対象学年を選んでください", true);
+  const btn = document.getElementById("m-add"); btn.disabled = true;
+  try{
+    const r = await rpc("admin_add_event", {p_pin:adminPin, p_date:date, p_type:mType, p_place:place, p_grades:grades, p_note:note});
+    if(r !== "ok") toast(PIN_MSG[r] || "登録できませんでした", true);
+    else{
+      toast(`${fmt(date)}の${mType}を登録しました`);
+      document.getElementById("m-place").value = ""; document.getElementById("m-note").value = "";
+      document.getElementById("m-date").value = nextSunday();
+      await refresh();
+    }
+  }catch(e){ toast("登録に失敗しました", true); }
+  btn.disabled = false;
+}
+async function delEvent(id){
+  const e = events.find(x=>x.id===id);
+  if(!confirm(`${fmt(e.event_date)}の${e.event_type}を削除します。回答もすべて消えます。よろしいですか？`)) return;
+  try{
+    const r = await rpc("admin_delete_event", {p_pin:adminPin, p_id:id});
+    if(r !== "ok") return toast(PIN_MSG[r] || "削除できませんでした", true);
+    toast("削除しました"); refresh();
+  }catch(e){ toast("削除に失敗しました", true); }
+}
+async function changePin(){
+  const n = document.getElementById("m-newpin").value.trim();
+  try{
+    const r = await rpc("admin_set_pin", {p_pin:adminPin, p_new:n});
+    if(r !== "ok") return toast(PIN_MSG[r] || "変更できませんでした", true);
+    adminPin = n; try{ sessionStorage.setItem("kkrs_pin", n); }catch(e){}
+    document.getElementById("m-newpin").value = "";
+    toast("PINを変更しました");
+  }catch(e){ toast("変更に失敗しました", true); }
+}
+
+/* ---------- init ---------- */
+(function init(){
+  document.getElementById("a-grade").innerHTML = GRADES.map(g=>`<button type="button" data-v="${g}">${g}</button>`).join("");
+  document.getElementById("m-grades").innerHTML = GRADES.map(g=>
+    `<label class="on"><input type="checkbox" value="${g}" checked onchange="this.parentElement.classList.toggle('on',this.checked)">${g}</label>`).join("");
+  segBind("a-grade", v => selGrade = v);
+  segBind("a-status", v => selStatus = v);
+  segBind("m-type", v => mType = v);
+  document.getElementById("m-date").value = nextSunday();
+  const me = ls("kkrs_me");
+  if(me){
+    if(me.name) document.getElementById("a-name").value = me.name;
+    if(GRADES.includes(me.grade)){ selGrade = me.grade;
+      [...document.getElementById("a-grade").children].forEach(b=>b.classList.toggle("on", b.dataset.v===me.grade)); }
+  }
+  try{ const p = sessionStorage.getItem("kkrs_pin"); if(p){ adminPin = p; openAdmin(); } }catch(e){}
+  refresh();
+})();
+</script>
+</body>
+</html>
