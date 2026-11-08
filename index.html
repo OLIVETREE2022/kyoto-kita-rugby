@@ -95,6 +95,27 @@
   .ae:last-child{border-bottom:none;}
   .back{background:none;border:none;color:var(--primary);font-family:inherit;font-size:14px;font-weight:600;cursor:pointer;padding:4px 0 12px;}
   .detail-head{margin-bottom:12px;}
+  select{appearance:none;-webkit-appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--ink-soft) 50%),linear-gradient(135deg,var(--ink-soft) 50%,transparent 50%);
+    background-position:calc(100% - 18px) 50%,calc(100% - 13px) 50%;background-size:5px 5px;background-repeat:no-repeat;padding-right:34px;}
+  .counts.four div .n{font-size:20px;}
+  .counts .na .n{color:#B58A1E;}
+  td.st.na{color:#B58A1E;}
+  tr.na-row td{background:#FFFBF0;}
+  .ov .na-n{color:#B58A1E;font-weight:700;}
+  .current{margin-top:10px;padding:10px 12px;border-radius:10px;background:var(--ok-soft);color:#1E5B3A;font-size:13px;display:none;}
+  .current.show{display:block;}
+  .mem-row{display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid var(--border);}
+  .mem-row:last-child{border-bottom:none;}
+  .mem-row .nm{flex:1;font-size:14.5px;}
+  .mem-row .edit-form{flex:1;display:flex;gap:6px;}
+  .mem-row .edit-form input{padding:8px 10px;font-size:15px;}
+  .mem-row .edit-form select{width:auto;padding:8px 30px 8px 10px;font-size:14px;}
+  .mini{border:1.5px solid var(--border);background:#fff;color:var(--ink-soft);font-family:inherit;font-size:12.5px;font-weight:600;
+    padding:6px 10px;border-radius:8px;cursor:pointer;white-space:nowrap;}
+  .mini.red{color:var(--ng);border-color:#E8C2C4;}
+  .mini.go{color:#fff;background:var(--primary);border-color:var(--primary);}
+  .gcount{font-size:12px;font-weight:400;opacity:.85;}
+  .seg.small button{padding:9px 2px;font-size:13.5px;}
 </style>
 </head>
 <body>
@@ -105,7 +126,7 @@
 <nav>
   <button id="tb-answer" class="active" onclick="showTab('answer')">出欠を回答</button>
   <button id="tb-list" onclick="showTab('list')">回答をみる</button>
-  <button id="tb-admin" onclick="showTab('admin')">予定管理</button>
+  <button id="tb-admin" onclick="showTab('admin')">予定・名簿</button>
 </nav>
 <main>
   <!-- 回答 -->
@@ -118,9 +139,10 @@
       <h2>2. 出欠を入力</h2>
       <label>学年<span class="req">必須</span></label>
       <div class="seg" id="a-grade"></div>
-      <label>おこさまのフルネーム<span class="req">必須</span></label>
-      <input type="text" id="a-name" placeholder="例：山田 太郎" maxlength="40" autocomplete="off">
-      <div class="hint">次回から自動で入ります。兄弟姉妹は1人ずつ送信してください。</div>
+      <label>おこさまの名前<span class="req">必須</span></label>
+      <select id="a-member"><option value="">先に学年を選んでください</option></select>
+      <div class="hint">次回から自動で選ばれます。兄弟姉妹は1人ずつ送信してください。<br>名前がない場合は事務局へご連絡ください。</div>
+      <div class="current" id="a-current"></div>
       <label>出欠<span class="req">必須</span></label>
       <div class="seg" id="a-status">
         <button type="button" data-v="出席" class="ok">出席</button>
@@ -152,7 +174,7 @@
       <h2>事務局PIN</h2>
       <input type="password" id="m-pin" inputmode="numeric" placeholder="PINを入力">
       <button class="btn" onclick="unlock()">開く</button>
-      <div class="hint">予定の登録・削除は事務局のみ行えます。</div>
+      <div class="hint">予定の登録・削除、在籍一覧の管理は事務局のみ行えます。</div>
     </div>
     <div id="m-body" style="display:none;">
       <div class="card">
@@ -178,6 +200,20 @@
         <div id="m-events"></div>
       </div>
       <div class="card">
+        <h2>在籍一覧</h2>
+        <div class="seg small" id="r-tabs"></div>
+        <div id="r-list" style="margin-top:8px;"></div>
+      </div>
+      <div class="card">
+        <h2>メンバーを追加</h2>
+        <label>学年</label>
+        <div class="seg small" id="r-add-grade"></div>
+        <label>フルネーム（1行に1名・まとめて貼り付けOK）</label>
+        <textarea id="r-names" rows="5" placeholder="山田 太郎&#10;鈴木 花子&#10;佐藤 健"></textarea>
+        <div class="hint">同じ学年に同じ名前がいる場合は追加されません。</div>
+        <button class="btn" id="r-add" onclick="addMembers()">名簿に追加する</button>
+      </div>
+      <div class="card">
         <h2>PINを変更</h2>
         <input type="password" id="m-newpin" inputmode="numeric" placeholder="新しいPIN（4桁以上）">
         <button class="btn sub" onclick="changePin()">変更する</button>
@@ -191,10 +227,12 @@
 const SB_URL = "https://ltiefywenbkhcefljizg.supabase.co";
 const SB_KEY = "sb_publishable_7UF8suYO67WaOpC0qKdWXw_DllMteop";
 const GRADES = ["未就学児","小1","小2"];
-const STC = {"出席":"ok","欠席":"ng","未定":"tbd"};
+const STC = {"出席":"ok","欠席":"ng","未定":"tbd","未回答":"na"};
+const ORDER = {"出席":0,"未定":1,"欠席":2,"未回答":3};
 
-let events = [], responses = [];
+let events = [], responses = [], members = [];
 let selEvent = null, selGrade = null, selStatus = null, mType = "練習";
+let rTab = GRADES[0], rAddGrade = GRADES[0], editingId = null;
 let adminPin = null;
 
 /* ---------- API ---------- */
@@ -210,28 +248,32 @@ async function api(path, opts = {}){
 const rpc = (fn, body) => api("rpc/" + fn, {method:"POST", body: JSON.stringify(body)});
 
 async function loadAll(){
-  const [ev, rs] = await Promise.all([
+  const [ev, rs, ms] = await Promise.all([
     api("events?select=*&order=event_date.asc"),
-    api("responses?select=*&order=full_name.asc")
+    api("responses?select=*&order=full_name.asc"),
+    api("members?select=*&active=eq.true&order=full_name.asc")
   ]);
-  events = ev || []; responses = rs || [];
+  events = ev || []; responses = rs || []; members = ms || [];
 }
 
 /* ---------- utils ---------- */
 const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const jp = (a,b) => a.localeCompare(b, "ja");
 function iso(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
 function today(){ return iso(new Date()); }
 function nextSunday(){ const d=new Date(); d.setDate(d.getDate()+((7-d.getDay())%7||7)); return iso(d); }
 function fmt(s){ const [y,m,d]=s.split("-").map(Number); const w="日月火水木金土"[new Date(y,m-1,d).getDay()]; return `${m}/${d}(${w})`; }
 function tag(t){ return `<span class="tag ${t==="練習"?"practice":t==="試合"?"match":"other"}">${t}</span>`; }
 function upcoming(){ return events.filter(e => e.event_date >= today()); }
+const membersOf = g => members.filter(m => m.grade === g).sort((a,b)=>jp(a.full_name,b.full_name));
 let tt;
 function toast(msg, bad){ const el=document.getElementById("toast"); el.textContent=msg; el.className="toast show"+(bad?" bad":""); clearTimeout(tt); tt=setTimeout(()=>el.className="toast",3200); }
 function ls(k,v){ try{ if(v===undefined) return JSON.parse(localStorage.getItem(k)); localStorage.setItem(k,JSON.stringify(v)); }catch(e){ return null; } }
+function segSet(id, v){ [...document.getElementById(id).children].forEach(b => b.classList.toggle("on", b.dataset.v===v)); }
 function segBind(id, cb){
   document.getElementById(id).addEventListener("click", e => {
-    const b = e.target.closest("button"); if(!b) return;
-    [...e.currentTarget.children].forEach(x => x.classList.toggle("on", x===b)); cb(b.dataset.v);
+    const b = e.target.closest("button"); if(!b || !e.currentTarget.contains(b)) return;
+    segSet(id, b.dataset.v); cb(b.dataset.v);
   });
 }
 
@@ -241,12 +283,12 @@ function showTab(n){
     document.getElementById("v-"+k).classList.toggle("active", k===n);
     document.getElementById("tb-"+k).classList.toggle("active", k===n);
   });
-  if(n==="list"){ closeDetail(); refresh(); }
-  if(n==="answer") refresh();
+  if(n==="list") closeDetail();
+  refresh();
 }
 async function refresh(){
   try{ await loadAll(); }catch(e){ toast("読み込みに失敗しました。電波を確認してください", true); return; }
-  renderAnswerEvents(); renderOverview(); renderAdminEvents();
+  renderAnswerEvents(); fillMemberSelect(); renderOverview(); renderAdminEvents(); renderRoster();
 }
 
 /* ---------- 回答 ---------- */
@@ -262,36 +304,66 @@ function renderAnswerEvents(){
     </button>`).join("");
 }
 function pickEvent(id){
-  selEvent = id; renderAnswerEvents();
+  selEvent = id; renderAnswerEvents(); showCurrent();
   const f = document.getElementById("a-form"); f.style.display="block";
   f.scrollIntoView({behavior:"smooth", block:"start"});
 }
+function fillMemberSelect(keepId){
+  const sel = document.getElementById("a-member");
+  const cur = keepId ?? sel.value;
+  if(!selGrade){ sel.innerHTML = `<option value="">先に学年を選んでください</option>`; return; }
+  const list = membersOf(selGrade);
+  sel.innerHTML = list.length
+    ? `<option value="">名前を選んでください</option>` + list.map(m=>`<option value="${m.id}">${esc(m.full_name)}</option>`).join("")
+    : `<option value="">${selGrade}の名簿がまだありません</option>`;
+  if(list.some(m=>m.id===cur)) sel.value = cur;
+  showCurrent();
+}
+function showCurrent(){
+  const box = document.getElementById("a-current");
+  const mid = document.getElementById("a-member").value;
+  const r = responses.find(x => x.event_id===selEvent && x.member_id===mid);
+  if(!selEvent || !mid || !r){ box.className = "current"; return; }
+  box.textContent = `この日は「${r.status}」で回答済みです${r.note?`（備考：${r.note}）`:""}。変更する場合は選び直して送信してください。`;
+  box.className = "current show";
+}
 async function submitAnswer(){
-  const name = document.getElementById("a-name").value.trim();
+  const mid = document.getElementById("a-member").value;
   const note = document.getElementById("a-note").value.trim();
   if(!selEvent) return toast("日程を選んでください", true);
   if(!selGrade) return toast("学年を選んでください", true);
-  if(!name) return toast("フルネームを入力してください", true);
+  if(!mid) return toast("名前を選んでください", true);
   if(!selStatus) return toast("出席・欠席・未定を選んでください", true);
+  const m = members.find(x=>x.id===mid);
   const btn = document.getElementById("a-submit"); btn.disabled = true;
   try{
-    await rpc("submit_response", {p_event:selEvent, p_grade:selGrade, p_name:name, p_status:selStatus, p_note:note});
-    ls("kkrs_me", {name, grade:selGrade});
-    toast(`${name}さん「${selStatus}」で受け付けました`);
-    document.getElementById("a-note").value = "";
-    selStatus = null; [...document.getElementById("a-status").children].forEach(x=>x.classList.remove("on"));
-    loadAll().then(renderOverview).catch(()=>{});
+    const r = await rpc("submit_member_response", {p_event:selEvent, p_member:mid, p_status:selStatus, p_note:note});
+    if(r !== "ok"){ toast("送信できませんでした。ページを再読み込みしてください", true); }
+    else{
+      ls("kkrs_me2", {grade:selGrade, member:mid});
+      toast(`${m ? m.full_name : ""}さん「${selStatus}」で受け付けました`);
+      document.getElementById("a-note").value = "";
+      selStatus = null; segSet("a-status", null);
+      await loadAll(); showCurrent(); renderOverview();
+    }
   }catch(e){ toast("送信に失敗しました。もう一度お試しください", true); }
   btn.disabled = false;
 }
 
 /* ---------- 一覧 ---------- */
-function countFor(evId){
-  const rs = responses.filter(r => r.event_id === evId);
-  const c = {出席:0, 欠席:0, 未定:0, g:{}};
-  GRADES.forEach(g => c.g[g] = 0);
-  rs.forEach(r => { c[r.status]++; if(r.status==="出席" && c.g[r.grade]!==undefined) c.g[r.grade]++; });
-  return c;
+function stats(e){
+  const rs = responses.filter(r => r.event_id === e.id);
+  const target = GRADES.filter(g => (e.grades||[]).includes(g));
+  const c = {出席:0, 欠席:0, 未定:0, 未回答:0, g:{}};
+  GRADES.forEach(g => c.g[g] = {出席:0, roster:0, na:[]});
+  rs.forEach(r => { if(c[r.status]!==undefined) c[r.status]++; if(r.status==="出席" && c.g[r.grade]) c.g[r.grade].出席++; });
+  target.forEach(g => {
+    const ms = membersOf(g);
+    c.g[g].roster = ms.length;
+    c.g[g].na = ms.filter(m => !rs.some(r => r.member_id === m.id));
+    c.未回答 += c.g[g].na.length;
+  });
+  return {c, rs, target};
 }
 function renderOverview(){
   const box = document.getElementById("l-table");
@@ -301,32 +373,34 @@ function renderOverview(){
   if(!shown.length){ box.innerHTML = `<div class="empty">予定がまだ登録されていません。</div>`; return; }
   box.innerHTML = `<table class="ov"><thead><tr>
       <th>日程</th>${GRADES.map(g=>`<th>${g==="未就学児"?"未就学":g}</th>`).join("")}<th>出席計</th></tr></thead><tbody>
-    ${shown.map(e => { const c = countFor(e.id); return `
+    ${shown.map(e => { const {c, target} = stats(e); return `
       <tr class="row" onclick="openDetail('${e.id}')">
         <td><b>${fmt(e.event_date)}</b> ${tag(e.event_type)}<span class="sub">${esc(e.place)}</span></td>
-        ${GRADES.map(g => (e.grades||[]).includes(g)
-            ? `<td class="${c.g[g]?"":"zero"}">${c.g[g]}</td>` : `<td class="zero">－</td>`).join("")}
-        <td><span class="total">${c.出席}</span><span class="sub">欠${c.欠席}・未${c.未定}</span></td>
+        ${GRADES.map(g => target.includes(g)
+            ? `<td><span class="${c.g[g].出席?"":"zero"}">${c.g[g].出席}</span><span class="sub">/${c.g[g].roster}名</span></td>`
+            : `<td class="zero">－</td>`).join("")}
+        <td><span class="total">${c.出席}</span><span class="sub">${c.未回答?`<span class="na-n">未回答${c.未回答}</span>`:"全員回答"}</span></td>
       </tr>`; }).join("")}
     </tbody></table>`;
 }
 function openDetail(id){
   const e = events.find(x => x.id === id); if(!e) return;
-  const rs = responses.filter(r => r.event_id === id);
-  const c = countFor(id);
+  const {c, rs, target} = stats(e);
   let h = `<button class="back" onclick="closeDetail()">← 一覧にもどる</button>
     <div class="card detail-head"><div class="d">${tag(e.event_type)}${fmt(e.event_date)}</div>
     <div class="m">📍 ${esc(e.place)}</div>${e.note?`<div class="m">📢 ${esc(e.note)}</div>`:""}</div>
-    <div class="counts"><div class="ok"><div class="n">${c.出席}</div><div class="l">出席</div></div>
+    <div class="counts four"><div class="ok"><div class="n">${c.出席}</div><div class="l">出席</div></div>
     <div class="ng"><div class="n">${c.欠席}</div><div class="l">欠席</div></div>
-    <div class="tbd"><div class="n">${c.未定}</div><div class="l">未定</div></div></div>`;
-  GRADES.filter(g => (e.grades||[]).includes(g) || rs.some(r=>r.grade===g)).forEach(g => {
-    const rows = rs.filter(r => r.grade === g).sort((a,b)=>{
-      const o={"出席":0,"未定":1,"欠席":2}; return o[a.status]-o[b.status] || a.full_name.localeCompare(b.full_name,"ja"); });
-    h += `<div class="gb"><h3>${g}<span>出席 ${c.g[g]||0} ／ 回答 ${rows.length}名</span></h3><table>
-      ${rows.length ? rows.map(r => `<tr><td class="st ${STC[r.status]}">${r.status}</td>
-        <td>${esc(r.full_name)}${r.note?`<div class="note">${esc(r.note)}</div>`:""}</td></tr>`).join("")
-        : `<tr><td class="note">まだ回答がありません</td></tr>`}</table></div>`;
+    <div class="tbd"><div class="n">${c.未定}</div><div class="l">未定</div></div>
+    <div class="na"><div class="n">${c.未回答}</div><div class="l">未回答</div></div></div>`;
+  GRADES.filter(g => target.includes(g) || rs.some(r=>r.grade===g)).forEach(g => {
+    const rows = rs.filter(r => r.grade === g).map(r => ({name:r.full_name, status:r.status, note:r.note}))
+      .concat((c.g[g].na||[]).map(m => ({name:m.full_name, status:"未回答"})))
+      .sort((a,b) => ORDER[a.status]-ORDER[b.status] || jp(a.name,b.name));
+    h += `<div class="gb"><h3>${g}<span>出席 ${c.g[g].出席} ／ 在籍 ${c.g[g].roster}名${c.g[g].na.length?`・未回答 ${c.g[g].na.length}`:""}</span></h3><table>
+      ${rows.length ? rows.map(r => `<tr class="${r.status==="未回答"?"na-row":""}"><td class="st ${STC[r.status]}">${r.status}</td>
+        <td>${esc(r.name)}${r.note?`<div class="note">${esc(r.note)}</div>`:""}</td></tr>`).join("")
+        : `<tr><td class="note">名簿・回答がありません</td></tr>`}</table></div>`;
   });
   document.getElementById("l-overview").style.display = "none";
   const d = document.getElementById("l-detail"); d.innerHTML = h; d.style.display = "block";
@@ -339,6 +413,10 @@ function closeDetail(){
 
 /* ---------- 管理 ---------- */
 const PIN_MSG = {invalid_pin:"PINが違います", locked:"失敗が続いたため15分ロック中です", pin_too_short:"PINは4桁以上にしてください"};
+function pinFail(r, fallback){
+  if(r === "invalid_pin"){ adminPin = null; try{ sessionStorage.removeItem("kkrs_pin"); }catch(e){} lockAdmin(); }
+  toast(PIN_MSG[r] || fallback, true);
+}
 async function unlock(){
   const p = document.getElementById("m-pin").value.trim();
   if(!p) return;
@@ -346,13 +424,18 @@ async function unlock(){
     const r = await rpc("verify_pin", {p_pin:p});
     if(r !== "ok") return toast(PIN_MSG[r] || "確認できませんでした", true);
     adminPin = p; try{ sessionStorage.setItem("kkrs_pin", p); }catch(e){}
+    document.getElementById("m-pin").value = "";
     openAdmin();
   }catch(e){ toast("通信に失敗しました", true); }
 }
 function openAdmin(){
   document.getElementById("m-lock").style.display = "none";
   document.getElementById("m-body").style.display = "block";
-  renderAdminEvents();
+  renderAdminEvents(); renderRoster();
+}
+function lockAdmin(){
+  document.getElementById("m-lock").style.display = "block";
+  document.getElementById("m-body").style.display = "none";
 }
 function renderAdminEvents(){
   const box = document.getElementById("m-events");
@@ -373,7 +456,7 @@ async function addEvent(){
   const btn = document.getElementById("m-add"); btn.disabled = true;
   try{
     const r = await rpc("admin_add_event", {p_pin:adminPin, p_date:date, p_type:mType, p_place:place, p_grades:grades, p_note:note});
-    if(r !== "ok") toast(PIN_MSG[r] || "登録できませんでした", true);
+    if(r !== "ok") pinFail(r, "登録できませんでした");
     else{
       toast(`${fmt(date)}の${mType}を登録しました`);
       document.getElementById("m-place").value = ""; document.getElementById("m-note").value = "";
@@ -388,15 +471,69 @@ async function delEvent(id){
   if(!confirm(`${fmt(e.event_date)}の${e.event_type}を削除します。回答もすべて消えます。よろしいですか？`)) return;
   try{
     const r = await rpc("admin_delete_event", {p_pin:adminPin, p_id:id});
-    if(r !== "ok") return toast(PIN_MSG[r] || "削除できませんでした", true);
+    if(r !== "ok") return pinFail(r, "削除できませんでした");
     toast("削除しました"); refresh();
   }catch(e){ toast("削除に失敗しました", true); }
+}
+
+/* 在籍一覧 */
+function renderRoster(){
+  const tabs = document.getElementById("r-tabs");
+  tabs.innerHTML = GRADES.map(g => `<button type="button" data-v="${g}" class="${g===rTab?"on":""}">${g}<br><span class="gcount">${membersOf(g).length}名</span></button>`).join("");
+  const box = document.getElementById("r-list");
+  const list = membersOf(rTab);
+  if(!list.length){ box.innerHTML = `<div class="empty">${rTab}のメンバーはまだいません。下の「メンバーを追加」から登録してください。</div>`; return; }
+  box.innerHTML = list.map(m => m.id === editingId ? `
+    <div class="mem-row"><div class="edit-form">
+      <input type="text" id="ed-name" value="${esc(m.full_name)}" maxlength="40">
+      <select id="ed-grade">${GRADES.map(g=>`<option ${g===m.grade?"selected":""}>${g}</option>`).join("")}</select></div>
+      <button class="mini go" onclick="saveMember('${m.id}')">保存</button>
+      <button class="mini" onclick="editMember(null)">戻る</button></div>` : `
+    <div class="mem-row"><div class="nm">${esc(m.full_name)}</div>
+      <button class="mini" onclick="editMember('${m.id}')">編集</button>
+      <button class="mini red" onclick="removeMember('${m.id}')">退会</button></div>`).join("");
+}
+function editMember(id){ editingId = id; renderRoster(); }
+async function saveMember(id){
+  const name = document.getElementById("ed-name").value.trim();
+  const grade = document.getElementById("ed-grade").value;
+  if(!name) return toast("名前を入力してください", true);
+  try{
+    const r = await rpc("admin_update_member", {p_pin:adminPin, p_id:id, p_grade:grade, p_name:name});
+    if(r !== "ok") return pinFail(r, "保存できませんでした");
+    editingId = null; toast("保存しました"); await refresh();
+  }catch(e){ toast("保存に失敗しました", true); }
+}
+async function removeMember(id){
+  const m = members.find(x=>x.id===id);
+  if(!confirm(`${m.full_name}さんを在籍一覧から外します（過去の回答は残ります）。よろしいですか？`)) return;
+  try{
+    const r = await rpc("admin_remove_member", {p_pin:adminPin, p_id:id});
+    if(r !== "ok") return pinFail(r, "変更できませんでした");
+    toast("在籍一覧から外しました"); await refresh();
+  }catch(e){ toast("変更に失敗しました", true); }
+}
+async function addMembers(){
+  const names = document.getElementById("r-names").value.split(/\r?\n/).map(s=>s.trim()).filter(Boolean);
+  if(!names.length) return toast("名前を入力してください", true);
+  const btn = document.getElementById("r-add"); btn.disabled = true;
+  try{
+    const r = await rpc("admin_add_members", {p_pin:adminPin, p_grade:rAddGrade, p_names:names});
+    if(!String(r).startsWith("ok")) pinFail(r, "追加できませんでした");
+    else{
+      const n = Number(String(r).split(":")[1] || 0);
+      toast(`${rAddGrade}に${n}名を追加しました${n<names.length?`（重複${names.length-n}名はスキップ）`:""}`);
+      document.getElementById("r-names").value = "";
+      rTab = rAddGrade; await refresh();
+    }
+  }catch(e){ toast("追加に失敗しました", true); }
+  btn.disabled = false;
 }
 async function changePin(){
   const n = document.getElementById("m-newpin").value.trim();
   try{
     const r = await rpc("admin_set_pin", {p_pin:adminPin, p_new:n});
-    if(r !== "ok") return toast(PIN_MSG[r] || "変更できませんでした", true);
+    if(r !== "ok") return pinFail(r, "変更できませんでした");
     adminPin = n; try{ sessionStorage.setItem("kkrs_pin", n); }catch(e){}
     document.getElementById("m-newpin").value = "";
     toast("PINを変更しました");
@@ -406,20 +543,22 @@ async function changePin(){
 /* ---------- init ---------- */
 (function init(){
   document.getElementById("a-grade").innerHTML = GRADES.map(g=>`<button type="button" data-v="${g}">${g}</button>`).join("");
+  document.getElementById("r-add-grade").innerHTML = GRADES.map(g=>`<button type="button" data-v="${g}" class="${g===rAddGrade?"on":""}">${g}</button>`).join("");
   document.getElementById("m-grades").innerHTML = GRADES.map(g=>
     `<label class="on"><input type="checkbox" value="${g}" checked onchange="this.parentElement.classList.toggle('on',this.checked)">${g}</label>`).join("");
-  segBind("a-grade", v => selGrade = v);
+  segBind("a-grade", v => { selGrade = v; fillMemberSelect(""); });
   segBind("a-status", v => selStatus = v);
   segBind("m-type", v => mType = v);
+  segBind("r-add-grade", v => rAddGrade = v);
+  document.getElementById("r-tabs").addEventListener("click", e => {
+    const b = e.target.closest("button"); if(!b) return; rTab = b.dataset.v; editingId = null; renderRoster();
+  });
+  document.getElementById("a-member").addEventListener("change", showCurrent);
   document.getElementById("m-date").value = nextSunday();
-  const me = ls("kkrs_me");
-  if(me){
-    if(me.name) document.getElementById("a-name").value = me.name;
-    if(GRADES.includes(me.grade)){ selGrade = me.grade;
-      [...document.getElementById("a-grade").children].forEach(b=>b.classList.toggle("on", b.dataset.v===me.grade)); }
-  }
+  const me = ls("kkrs_me2");
+  if(me && GRADES.includes(me.grade)){ selGrade = me.grade; segSet("a-grade", me.grade); }
   try{ const p = sessionStorage.getItem("kkrs_pin"); if(p){ adminPin = p; openAdmin(); } }catch(e){}
-  refresh();
+  refresh().then(() => { if(me && me.member) fillMemberSelect(me.member); });
 })();
 </script>
 </body>
